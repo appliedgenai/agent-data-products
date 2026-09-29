@@ -4,9 +4,9 @@
 
 **Mohit Mittal · Independent architecture proposal · September 2026**
 
-Consider an enterprise introducing three agents: one prepares account reviews, another investigates service failures, and a third supports financial planning. All three need to know which business entities belong to a customer, how performance is measured and which documents support an explanation. If each team reconstructs those relationships, writes its own metric queries and builds a private document index, every new agent brings another copy of the same business knowledge to maintain.
+As an enterprise deploys agents across business functions, each team needs access to business entities and relationships, consistent measures and supporting evidence. If every team reconstructs that knowledge, writes its own metric queries and builds a private document index, the organization acquires many interpretations of the same business—and many copies to maintain.
 
-**The enterprise should publish that knowledge as reusable data products that agents can discover and consume.** A customer knowledge graph supplies approved relationships. A semantic metrics product supplies defined, executable business measures. A retrieval product supplies relevant, authorized evidence through a maintained vector or hybrid index. Each has a named owner, a supported interface and measurable commitments to its consumers.
+**The enterprise should publish that knowledge as reusable data products that agents can discover and consume.** A knowledge graph supplies approved entities and relationships. A semantic metrics product supplies defined, executable business measures. A retrieval product supplies relevant, authorized evidence through a maintained vector or hybrid index. Each has a named owner, a supported interface and measurable commitments to its consumers.
 
 This paper uses **agent economy** to describe an ecosystem in which agents across teams—and, where authorized, partner organizations—consume shared enterprise capabilities to perform work. The starting point is internal reuse. It does not require a commercial marketplace: the economic question is whether the next agent can use an existing product with less duplicated engineering and review effort.
 
@@ -18,66 +18,70 @@ For a CIO, CTO or Chief Architect, three decisions follow:
 - **What may an agent rely on?** Define each product's meaning, scope, access, freshness, failure behavior and evidence of correctness.
 - **How will reuse improve?** Fund product ownership and use evaluated agent outcomes to repair shared products through reviewed releases.
 
-The architecture below makes those decisions concrete. The worked example follows a metric agent that combines the three products; account-review and service agents can reuse them for different tasks. The scenario is synthetic, not a claim about an employer deployment.
+The reference architecture comes first: product boundaries, consumption contracts, the data foundation, controls, evaluation and sourcing decisions. A separate worked example then shows a metric agent using the architecture. The final section explains how to adopt it.
+
+## Reference architecture
+
+Publish domain-owned knowledge, calculation and retrieval capabilities above the data estate. Expose them through governed interfaces, let agent applications select the products a task needs, and use evaluated outcomes to drive reviewed changes. These are logical responsibilities; they need not become separate platforms or teams.
 
 ![Three classes of owned data products supply several enterprise agents through governed discovery and consumption.](diagrams/01-agent-product-architecture.png)
 
-*Figure 1. Agent teams consume shared knowledge, calculations and evidence. Data-product teams own those capabilities across agent implementations. Lines show supported publication and consumption routes; a task selects the products it needs. Dashed paths carry agent observations to owner review and reviewed releases back to the products.*
+*Figure 1. Reference architecture, independent of any single use case. Solid paths show publication and consumption routes; a task selects the products it needs. Dashed paths carry observations from the consumer group to owner review and reviewed releases back to the products. Column alignment does not assign an agent to a particular product. Product and application interfaces enforce the relevant controls.*
+
+| Architectural responsibility | What it owns |
+|---|---|
+| Enterprise data foundation | Authoritative inputs, validated transformations and source access |
+| Domain data products | Business meaning, supported operations, quality and lifecycle commitments |
+| Discovery and consumption | Product selection, version resolution, verified identity, bounded invocation and usage records |
+| Agent applications | Task intent, product composition, result acceptance, final disclosure and separately authorized actions |
+| Product operations and learning | Consumer support, evaluation, incident diagnosis and reviewed releases |
 
 
-**Reading guide:** [The three products](#1-publish-three-distinct-product-promises) · [Agent consumption contract](#2-design-the-contract-for-agent-consumption) · [Worked agent task](#3-one-agent-task-three-products) · [Medallion and Platinum](#4-build-on-the-data-estate-you-already-operate) · [Failure and access](#5-make-failure-and-access-part-of-the-product) · [Evaluation and learning](#6-make-agent-use-improve-the-products) · [Build vs. Buy](#7-build-vs-buy-buy-engines-own-the-product) · [Enterprise adoption](#8-adopt-through-a-second-consumer)
+**Reading guide:** [Reference architecture](#reference-architecture) · [Product promises](#1-publish-three-distinct-product-promises) · [Consumption contracts](#2-design-the-contract-for-agent-consumption) · [Data foundation](#3-build-on-the-data-estate-you-already-operate) · [Failure and access](#4-make-failure-and-access-part-of-the-product) · [Evaluation and learning](#5-make-agent-use-improve-the-products) · [Build vs. Buy](#6-build-vs-buy-buy-engines-own-the-product) · [Worked example](#7-worked-example-one-metric-agent-three-products) · [Adoption](#8-adopt-through-a-second-consumer)
 
 ## 1. Publish three distinct product promises
 
-The unit of reuse is a business capability with an operating commitment. A team consuming a Customer Relationship Graph needs to know which relationships it can rely on, at what effective date and under whose authority. Knowing which graph database stores the nodes is secondary.
+The unit of reuse is a business capability with an operating commitment. A team consuming a knowledge product needs to know which relationships it can rely on, at what effective date and under whose authority. Knowing which graph database stores the nodes is secondary.
 
 Domain ownership, data as a product and shared platform services provide a useful foundation. The particular architecture here applies those principles to agent consumption: products must make their meaning and permitted use explicit enough for an application to select and invoke them reliably. [Zhamak Dehghani, *Data Mesh Principles and Logical Architecture*](https://martinfowler.com/articles/data-mesh-principles.html).
 
-### Knowledge product: Customer Relationship Graph
+### Knowledge products: entities and relationships
 
-**Consumer promise:** resolve permitted customer identities and approved business relationships for a declared effective date.
+**Consumer promise:** resolve permitted business entities and approved relationships for a declared effective date.
 
-An account-review agent may need a commercial parent and its subsidiaries. A service agent may need the accounts entitled to support under a contract. Those are different relationship types; a shared graph should preserve the distinction. The customer-domain owner decides the meaning and authoritative sources. A product team maintains identifiers, relationship provenance, source mappings and the serving interface.
+The domain owner defines entity types, relationship meaning and authoritative sources. A product team maintains identifiers, relationship provenance, source mappings and the serving interface. Commercial ownership, contractual entitlement and operational dependency are different relationships; a shared graph must preserve their meaning and permitted uses.
 
-Publish bounded operations such as `resolve_customer`, `get_commercial_group` and `get_contract_coverage`. Inputs specify known identifiers, relationship types and an effective date. Responses carry stable entity IDs, relevant relationship paths, validity periods, source references, product versions and any unresolved mappings. A consequential uncertain identity match needs resolution; it cannot silently become an approved merge.
+Publish bounded entity-resolution, relationship-traversal and evidence operations, with domain-specific names and schemas. Inputs specify known identifiers, relationship types and an effective date. Responses carry stable entity IDs, relevant relationship paths, validity periods, source references, product versions and any unresolved mappings. A consequential uncertain identity match needs resolution; it cannot silently become an approved merge.
 
 The graph is the maintained representation of business relationships. Extracted document statements remain provisional until they meet the product's acceptance policy. A domain graph and a lineage graph also have different jobs: the former connects business entities; the latter connects data assets, transformations and consumers. Link them through controlled identifiers. Neither automatically establishes the completeness or truth of the other. [W3C provenance model](https://www.w3.org/TR/prov-dm/).
 
 An organization with a simple, stable hierarchy can begin with a relational implementation behind the same product contract. Invest in a graph engine when representative traversal, changing relationships and explanatory paths justify its operating cost. The data product persists even if its storage implementation changes.
 
-### Metrics product: Delivery Metrics
+### Semantic metrics products: executable business meaning
 
 **Consumer promise:** calculate approved measures for a specified population, period and breakdown.
 
-Publish metric definitions together with an execution service. The contract establishes business grain—the unit being measured, such as an order rather than a shipment—plus numerator and denominator, supported dimensions, permissible joins, calendar, exclusions, correction policy and owner. Agents invoke an approved calculation; each application should not generate its own interpretation of “on-time delivery” from table descriptions.
+Publish metric definitions together with an execution service. The contract establishes business grain—what one counted or aggregated record represents—plus numerator and denominator, supported dimensions, permissible joins, calendar, exclusions, correction policy and owner. Agents invoke an approved calculation; each application should not generate its own interpretation of a business measure from table descriptions.
 
-`query_metric` accepts a released metric ID, definition version, a compatible reference to the selected customer population (or cohort), periods and permitted dimensions. Its result includes the value, component measures, units, scope, actual time bounds, source snapshot or coverage watermark, quality status and calculation reference. Distinct business definitions receive explicit names or versions. Finance's recognized revenue and Sales' bookings should not be collapsed into a single ambiguous “revenue” measure.
+`query_metric` accepts a released metric ID, definition version, a compatible reference to the selected business population (or cohort), periods and permitted dimensions. Its result includes the value, component measures, units, scope, actual time bounds, source snapshot or coverage watermark, quality status and calculation reference. Distinct business definitions receive explicit names or versions. Finance's recognized revenue and Sales' bookings should not be collapsed into a single ambiguous “revenue” measure.
 
-Executable semantics matter. Averaging percentages without denominator weights, multiplying rows through a shipment join, or using a current hierarchy to restate historical results can produce plausible but incorrect answers. Product tests must reconcile these cases. A semantic model's declared cardinality is a constraint to validate against real data. [dbt join logic](https://docs.getdbt.com/docs/build/join-logic).
+Executable semantics matter. Averaging percentages without denominator weights, multiplying rows through a one-to-many join, or using a current hierarchy to restate historical results can produce plausible but incorrect answers. Product tests must reconcile these cases. A semantic model's declared cardinality is a constraint to validate against real data. [dbt join logic](https://docs.getdbt.com/docs/build/join-logic).
 
 There are concrete mechanisms to expose such products to agents. dbt's MCP tools include metric discovery, dimension discovery and metric queries. They provide an access path to defined measures; the enterprise remains responsible for the definitions, permitted tool subset and underlying data. Availability depends on the relevant service and plan. [dbt available MCP tools](https://docs.getdbt.com/docs/dbt-ai/mcp-available-tools).
 
-### Retrieval product: Operations Evidence
+### Retrieval products: governed access to evidence
 
 **Consumer promise:** return relevant, permitted passages from a declared corpus, with enough provenance to inspect their meaning and applicability.
 
 A reusable vector index becomes a product when someone owns the eligible sources, extraction quality, chunking, embedding configuration, refresh, entitlement mapping, deletion, retrieval evaluation and consumer interface. A product entry might publish the index directly to approved clients or expose it through `search_evidence`. A service interface gives the producer more control over query limits and enforcement while insulating consumers from index changes.
 
-Return source IDs and versions, document locations, event or validity dates, retrieved passages and index/retrieval versions. Preserve links to the authoritative record. Similarity scores describe retrieval behavior; they are not probabilities that a statement is true. Empty results do not establish that no incident occurred.
+Return source IDs and versions, document locations, event or validity dates, retrieved passages and index/retrieval versions. Preserve links to the authoritative record. Similarity scores describe retrieval behavior; they are not probabilities that a statement is true. Empty results do not establish that the underlying fact or event does not exist.
 
 Use lexical matching for exact identifiers and domain terms alongside vector retrieval where it improves representative tasks. Graph traversal can expand a search through known relationships when that helps. These are selectable retrieval strategies, not a requirement that every query traverse a graph and a vector index. [Neo4j retrieval guide](https://neo4j.com/docs/neo4j-graphrag-python/current/user_guide_rag.html).
 
 The three products can have different owners and release cadences while sharing infrastructure. They can also be interfaces of one cohesive domain product when purpose, ownership and lifecycle align. Do not split them into separate organizations solely because their storage technologies differ.
 
 McKinsey's public AI data-readiness guidance describes curated unstructured data products exposed through search and APIs, with relationships preserved as information is transformed. That supports this serving direction; the three-product contract and operating model here are an independent proposal. [McKinsey, *AI data readiness*](https://www.mckinsey.com/capabilities/mckinsey-technology/our-insights/ai-data-readiness-the-key-to-scaling-impact).
-
-| Agent consumer | Relationship product | Metrics product | Retrieval product |
-|---|---|---|---|
-| Account-review agent | Resolve the permitted commercial group | Calculate its delivery trend | Retrieve relevant account and incident evidence |
-| Metric agent | Fix the population for a comparison | Calculate and decompose the change | Find material for further investigation |
-| Service agent | Resolve account and contract coverage | Use only if the case needs a measure | Retrieve applicable procedures and case evidence |
-
-*Illustrative consumer map. Each product enforces the caller's scope; sharing a product does not mean every agent receives the same data.*
 
 ## 2. Design the contract for agent consumption
 
@@ -120,53 +124,17 @@ Keep broad development tools separate from a certified product interface. If a m
 
 For partner agents, add explicit agreements on identity federation, purpose, onward disclosure, residency, liability for corrections, support and commercial terms. Begin with a deliberately small product surface. An internal product does not become externally shareable simply because its endpoint speaks a common protocol.
 
-## 3. One agent task, three products
+### Composition is an application responsibility
 
-An operations leader asks a metric agent: **“Why did on-time delivery fall for our strategic customers between July and August?”** The following example is synthetic. It illustrates the products' contributions and the limits of the resulting explanation.
+Individually valid products do not automatically form a valid answer. The consuming application checks three conditions before combining results:
 
-First, the application establishes the approved measure and reporting basis. Customer Relationship Graph resolves the strategic-customer cohort as of July 1. The agent uses that fixed cohort for both months; unknown membership blocks a complete comparison. Changing the membership between months would answer a different question.
+1. **Population and identity:** requested and applied populations match, entity namespaces are compatible, and permissions have not silently reduced a claimed complete population. A narrower answer requires an explicitly supported scope and label.
+2. **Time and correction basis:** definitions, effective periods and data versions support the requested comparison. Use reproducible snapshots or retained calculation references where the contract promises reproducibility; a freshness watermark alone is insufficient. Current access still applies.
+3. **Evidence applicability:** retrieved sources identify their versions, coverage and relevant entities or period. Their relevance cannot override a failed calculation or scope check, and retrieval scores do not establish causation.
 
-Delivery Metrics calculates an order-level rate. The denominator includes eligible orders due in the month, including undelivered orders, and excludes orders canceled before the first committed deadline. The numerator counts orders fully delivered by that deadline. Reporting uses the original destination timezone, the region recorded at commitment and monthly snapshots frozen seven days after month-end. These are proposed choices for the example, not universal definitions.
+Required checks fail closed for the affected conclusion. Optional evidence can be unavailable without invalidating independently verified results, provided the application clearly qualifies what remains unanswered.
 
-| Region | July: on time / due | August: on time / due | Rate in each month |
-|---|---:|---:|---:|
-| North | 76 / 80 | 38 / 40 | 95% |
-| South | 14 / 20 | 42 / 60 | 70% |
-| Total | 90 / 100 | 80 / 100 | 90% → 80% |
-
-South's share increases from 20% to 60%. Recomputing August with July's regional weights gives 90%. In this complete two-region decomposition, the changed mix accounts for the full ten-percentage-point aggregate decline; neither regional rate deteriorated. That establishes the arithmetic contribution, not why the mix changed.
-
-The agent then queries Operations Evidence for the relevant regions and period. Suppose a synthetic August note reports a sorting backlog. The note is an investigation lead. It does not prove that the backlog caused the aggregate decline or the shift in order mix. The answer should explain what the calculation establishes and what further investigation remains.
-
-![A metric agent resolves a cohort, obtains an approved calculation and retrieves supporting evidence under three product contracts.](diagrams/02-product-composition.png)
-
-*Figure 2. The graph supplies the population, the metrics service supplies the calculation, and retrieval supplies documentary evidence. These dependencies are selected for this task. Other agents can reuse one or two products without executing this entire sequence.*
-
-If documentary retrieval times out, the application can return the verified numbers while identifying the incomplete investigation. If the denominator is uncertified, it stops the numerical conclusion. If customer IDs or effective periods are incompatible, a successful response from each service still does not justify combining them. Products therefore need both independent tests and composition tests.
-
-### What the application checks before combining results
-
-The following **filled synthetic consumption record** illustrates the checks. The identifiers are proposed references, not outputs from the runnable arithmetic fixture. Full membership and policy records are protected; references reveal only what the caller may inspect.
-
-| Product response | Relevant recorded state |
-|---|---|
-| Customer Relationship Graph | Cohort `strategic-jul01-r1`; namespace `enterprise.customer.v1`; membership effective 2026-07-01; immutable graph snapshot `g042`; no unresolved members; membership interpretation frozen for both periods |
-| Delivery Metrics | Definition `on-time-order.v1`; requested and applied cohort both `strategic-jul01-r1`; complete cohort coverage under the metric service's current permissions; immutable data snapshots `july-frozen-r1` and `august-frozen-r1`; calculation reference `calc-017` records the definition, inputs and grouping |
-| Operations Evidence | Approved corpus `ops-incidents.v1`; declared search period July–August 2026; index release `idx-028`; searchable-source manifest `docs-028` identifies source versions and ingestion coverage; returned passages retain their source event dates |
-
-The consuming application enforces three acceptance rules:
-
-1. **Preserve the requested population.** The metric service must acknowledge the exact cohort and compatible customer-ID namespace. If its permissions hide part of that population, return incomplete or denied according to disclosure policy. Do not silently present the filtered subset as the original cohort. A narrower population requires an explicit new request and label.
-2. **Preserve the requested time and correction basis.** The selected metric definition and data snapshots must support the frozen comparison and the graph's historical membership. A coverage watermark alone cannot reproduce a result after source corrections; retain an immutable data/calculation reference where reproducibility is promised. Required current authorization still applies.
-3. **Match evidence to the question without upgrading its authority.** The retrieval response must identify its corpus, source versions and known coverage, and the passages must be applicable to the period and entities being discussed. Coverage limits qualify the investigation. A matching document cannot override failed population or calculation checks.
-
-For example, a metric result marked `applied_cohort=strategic-current-r2` is rejected for this comparison even if its percentage looks plausible. A record containing `august-restated-r2` is not accepted as the requested frozen August result without an explicitly changed reporting basis. Each product may be valid independently; the combination fails this task's contract.
-
-An account-review agent can consume the same products for one permitted commercial group. A service agent can reuse identity and incident retrieval without querying the metric. This is the adoption test: the second application gets a supported capability, not another copy of an index, prompt or formula.
-
-[Run the synthetic arithmetic example](example/README.md). Its 17 checks cover selected calculation and contract failures. It does not implement the product services, graph, retrieval, permission system or complete agent workflow.
-
-## 4. Build on the data estate you already operate
+## 3. Build on the data estate you already operate
 
 The products need authoritative inputs and dependable transformation paths. Existing operational systems, master data, lakehouses, warehouses and document repositories remain their foundations. The incremental investment is the product boundary: curated meaning, serving interface, evaluation, consumer support and lifecycle operation.
 
@@ -174,13 +142,13 @@ In a medallion estate, Bronze preserves captured inputs, Silver supplies validat
 
 ![Medallion refinement feeds owned graph, metric and retrieval products through suitable detailed and business-ready inputs.](diagrams/03-foundation-to-products.png)
 
-*Figure 3. Product serving builds on the existing foundation. A graph may need validated entity detail; retrieval needs eligible content; metrics need models at the correct grain. Every product owns its relevant dependencies across layers.*
+*Figure 2. Product serving builds on the existing foundation. A graph may need validated entity detail; retrieval needs eligible content; metrics need models at the correct grain. Every product owns its relevant dependencies across layers.*
 
 Keep one authoritative metric definition. Gold already contains business meaning; Platinum need not recreate it or materialize another copy. Documents need not pass through a reporting aggregate before indexing. A logical product can share an engine with other products, while a derived store needs its own synchronization, access and recovery commitments.
 
 Existing catalogs, lineage and metadata automation can support discovery and impact assessment. Their coverage must be measured. They cannot establish an unrecorded business relationship, settle a disputed measure or identify an undocumented agent consumer automatically. Keep the investment tied to the selected agent task and the products it needs.
 
-## 5. Make failure and access part of the product
+## 4. Make failure and access part of the product
 
 Agent consumption increases the cost of a vague interface. A human analyst may notice a stale cohort or question an empty result; an application may continue unless the contract tells it to stop. Publish failure semantics that the consuming application can enforce.
 
@@ -188,7 +156,7 @@ Agent consumption increases the cost of a vague interface. A human analyst may n
 |---|---|
 | Ambiguous identity or metric | Request clarification or stop the affected conclusion; do not choose a materially different meaning silently |
 | Required data incomplete or stale | Return a machine-readable condition; serve a permitted labeled snapshot only if the task allows it |
-| Optional retrieval unavailable | Preserve separately verified calculations and qualify missing evidence; do not invent an explanation |
+| Optional product unavailable | Preserve independently verified results and qualify the missing contribution; do not invent an answer |
 | Access denied or restricted discovery | Enforce the boundary without leaking protected asset existence; internal diagnosis can be more specific than the consumer response |
 | Cross-product versions or time bases incompatible | Reject the combination or use an explicitly supported compatible set |
 | Source deletion or entitlement revocation | Prevent prohibited serving promptly, propagate deletion through derivatives and caches, and retain auditable handling under policy |
@@ -203,7 +171,7 @@ Treat retrieved text as evidence, including when it contains instructions. Keep 
 
 A data product authorizes a read or calculation within its contract. If an agent proposes updating an account, reallocating an order or opening a case, the operational service needs a separate action contract, validation and authorization. An analytical result is not a grant to act.
 
-## 6. Make agent use improve the products
+## 5. Make agent use improve the products
 
 A poor agent answer can reveal a product defect. It can also reveal an incorrect plan, a bad tool adapter or a faulty evaluation reference. Diagnose the failure before choosing the remedy. This is where evaluation becomes partly a data-product responsibility: the enterprise must maintain the facts, definitions, temporal references and expected behavior used to judge an answer.
 
@@ -211,13 +179,13 @@ Fitness is specific to the supported use and must be rechecked as inputs and con
 
 | Observed failure | Diagnostic question | Likely repair owner |
 |---|---|---|
-| Wrong customer population | Was the hierarchy incorrect, the date wrong, or the agent's cohort selection wrong? | Relationship product or agent/application owner, after reproduction |
+| Wrong entity population | Was the hierarchy incorrect, the date wrong, or the agent's cohort selection wrong? | Relationship product or agent/application owner, after reproduction |
 | Incorrect percentage | Did the metric definition, source completeness, join, query or displayed answer fail? | Metrics product or application owner |
 | Unsupported explanation | Was relevant evidence absent, inaccessible, poorly retrieved or misinterpreted? | Retrieval product or application/model owner |
 | “Failed” evaluation of a correct answer | Does the expected answer refer to a different snapshot, definition or access scope? | Evaluation owner |
 | Information disclosed outside scope | Which serving, caching, handoff or presentation boundary failed? | Product/platform and consuming-application owners |
 
-In the example, an evaluator expecting a restated August value can incorrectly fail an answer based on the requested frozen August snapshot. Pin the expected definition and data state; “the latest answer” is not a complete reference. Similarly, access-limited retrieval should not be judged against documents the caller could never receive.
+An evaluator that expects a restated value can incorrectly fail an answer based on the requested historical snapshot. Pin the expected definition and data state; “the latest answer” is not a complete reference. Similarly, access-limited retrieval should not be judged against documents the caller could never receive.
 
 ### Evaluate the product and the composed task
 
@@ -234,7 +202,7 @@ Databricks documents managed evaluation datasets and distinguishes feedback on o
 
 ![Agent outcomes feed a reviewed cycle of diagnosis, accountable repair, evaluation and compatible product release.](diagrams/04-reviewed-product-learning.png)
 
-*Figure 4. Evaluation can change a shared product, the consuming agent or the evaluator itself. Feedback is a candidate signal. Owners approve tested changes before other agents receive them.*
+*Figure 3. Evaluation can change a shared product, the consuming agent or the evaluator itself. Feedback is a candidate signal. Owners approve tested changes before other agents receive them.*
 
 Keep decision traces as observable records: task and product references, selected operations, source versions, concise decision rationale, checks, outcome and metered consumption. Protect sensitive payloads and apply retention policy. Hidden model reasoning is neither required nor an audit contract.
 
@@ -242,7 +210,19 @@ A failed case should become a reviewed regression case when it represents suppor
 
 The useful feedback loop is therefore **agent task → evidence → diagnosis → owner repair → evaluation → compatible release → observed result**. Never promote generated graph relationships, inferred metric definitions or retrieved claims automatically into authoritative products.
 
-## 7. Build vs. Buy: buy engines, own the product
+### People and decision rights
+
+| Accountable role | Decisions and recurring work |
+|---|---|
+| Domain product owner | Consumer promise, authoritative meaning, source responsibilities, acceptable use and compatibility of changes |
+| Data-product engineering team | Publication pipeline, interfaces, evaluations, source incidents, recovery, support and retirement |
+| Shared platform owner | Common discovery, identity integration, contract tooling, observability, metering and paved deployment paths |
+| Agent/application owner | Task success, product selection, safe composition, final disclosure, human review and separately authorized actions |
+| Business sponsor | Funded use case, accepted outcome, value measurement and expansion or retirement decision |
+
+Security, privacy and domain specialists contribute concrete acceptance conditions within these responsibilities. A cross-functional review should settle decisions that require it; it should not become a separate ticket for every ordinary read. Staff the support and stewardship work as part of the product budget, not as an informal favor from the original agent team.
+
+## 6. Build vs. Buy: buy engines, own the product
 
 The procurement question is which existing capabilities can satisfy the product promise and which missing interfaces justify custom work. Reuse is an option within that decision. Tool combinations below are candidates, not a tested integrated stack.
 
@@ -260,25 +240,71 @@ Databricks managed MCP servers expose scoped Genie Agents, AI Search indexes and
 
 Evaluate vendors against a product acceptance suite: the same business questions, identities, access scopes, changed definitions, late data, deletions, load and failure conditions. Include exportability of contracts and evaluation assets. The enterprise should be able to change a model, adapter or engine without losing ownership of its business semantics.
 
+## 7. Worked example: one metric agent, three products
+
+An operations leader asks a metric agent: **“Why did on-time delivery fall for our strategic customers between July and August?”** The following example is synthetic. It illustrates the products' contributions and the limits of the resulting explanation. The reference architecture is instantiated as three named products: **Customer Relationship Graph**, **Delivery Metrics** and **Operations Evidence**. Their implementation and operating commitments are specific to this scenario.
+
+First, the application establishes the approved measure and reporting basis. Customer Relationship Graph resolves the strategic-customer cohort as of July 1. The agent uses that fixed cohort for both months; unknown membership blocks a complete comparison. Changing the membership between months would answer a different question.
+
+Delivery Metrics calculates an order-level rate. The denominator includes eligible orders due in the month, including undelivered orders, and excludes orders canceled before the first committed deadline. The numerator counts orders fully delivered by that deadline. Reporting uses the original destination timezone, the region recorded at commitment and monthly snapshots frozen seven days after month-end. These are proposed choices for the example, not universal definitions.
+
+| Region | July: on time / due | August: on time / due | Rate in each month |
+|---|---:|---:|---:|
+| North | 76 / 80 | 38 / 40 | 95% |
+| South | 14 / 20 | 42 / 60 | 70% |
+| Total | 90 / 100 | 80 / 100 | 90% → 80% |
+
+South's share increases from 20% to 60%. Recomputing August with July's regional weights gives 90%. In this complete two-region decomposition, the changed mix accounts for the full ten-percentage-point aggregate decline; neither regional rate deteriorated. That establishes the arithmetic contribution, not why the mix changed.
+
+The agent then queries Operations Evidence for the relevant regions and period. Suppose a synthetic August note reports a sorting backlog. The note is an investigation lead. It does not prove that the backlog caused the aggregate decline or the shift in order mix. The answer should explain what the calculation establishes and what further investigation remains.
+
+![A metric agent resolves a cohort, obtains an approved calculation and retrieves supporting evidence under three product contracts.](diagrams/02-product-composition.png)
+
+*Figure 4. The graph supplies the population, the metrics service supplies the calculation, and retrieval supplies documentary evidence. These dependencies are selected for this task. Other agents can reuse one or two products without executing this entire sequence.*
+
+If documentary retrieval times out, the application can return the verified numbers while identifying the incomplete investigation. If the denominator is uncertified, it stops the numerical conclusion. If customer IDs or effective periods are incompatible, a successful response from each service still does not justify combining them. Products therefore need both independent tests and composition tests.
+
+### What the application checks before combining results
+
+The following **filled synthetic consumption record** illustrates the checks. The identifiers are proposed references, not outputs from the runnable arithmetic fixture. Full membership and policy records are protected; references reveal only what the caller may inspect.
+
+| Product response | Relevant recorded state |
+|---|---|
+| Customer Relationship Graph | Cohort `strategic-jul01-r1`; namespace `enterprise.customer.v1`; membership effective 2026-07-01; immutable graph snapshot `g042`; no unresolved members; membership interpretation frozen for both periods |
+| Delivery Metrics | Definition `on-time-order.v1`; requested and applied cohort both `strategic-jul01-r1`; complete cohort coverage under the metric service's current permissions; immutable data snapshots `july-frozen-r1` and `august-frozen-r1`; calculation reference `calc-017` records the definition, inputs and grouping |
+| Operations Evidence | Approved corpus `ops-incidents.v1`; declared search period July–August 2026; index release `idx-028`; searchable-source manifest `docs-028` identifies source versions and ingestion coverage; returned passages retain their source event dates |
+
+The application applies the reference architecture's composition checks to this record:
+
+1. **Population:** require `strategic-jul01-r1` in `enterprise.customer.v1`, with complete coverage of that cohort under current permissions. A restricted subset cannot be presented as the complete comparison.
+2. **Time:** require `on-time-order.v1`, the July/August frozen snapshots and the July 1 membership basis. Retain `calc-017` so the reported values can be tied to those inputs.
+3. **Evidence:** require the approved `ops-incidents.v1` corpus, source versions from `docs-028` and passages applicable to the selected entities and period. Coverage limits qualify the investigation, and a matching note cannot establish the cause of the calculated change.
+
+For example, a metric result marked `applied_cohort=strategic-current-r2` is rejected for this comparison even if its percentage looks plausible. A record containing `august-restated-r2` is not accepted as the requested frozen August result without an explicitly changed reporting basis. Each product may be valid independently; the combination fails this task's contract.
+
+An account-review agent can consume the same products for one permitted commercial group. A service agent can reuse identity and incident retrieval without querying the metric. This is the adoption test: the second application gets a supported capability, not another copy of an index, prompt or formula.
+
+### Reuse beyond the metric agent
+
+| Agent consumer | Relationship product | Metrics product | Retrieval product |
+|---|---|---|---|
+| Account-review agent | Resolve the permitted commercial group | Calculate its delivery trend | Retrieve relevant account and incident evidence |
+| Metric agent | Fix the population for a comparison | Calculate and decompose the change | Find material for further investigation |
+| Service agent | Resolve account and contract coverage | Use only if the case needs a measure | Retrieve applicable procedures and case evidence |
+
+*Illustrative consumer map. Each product enforces the caller's scope; sharing a product does not mean every agent receives the same data.*
+
+The scenario has a warehouse, customer master, approved KPI reports, an identity service and an incident repository. The incremental work is the shared product contract, temporal relationships, approved metric interface, retrieval qualification and acceptance suite. The products reuse that foundation.
+
+[Run the synthetic arithmetic example](example/README.md). Its 17 checks cover selected calculation and contract failures. It does not implement the product services, graph, retrieval, permission system or complete agent workflow.
+
 ## 8. Adopt through a second consumer
 
-Start with one consequential agent task and an existing data foundation. In the hypothetical delivery scenario, assume the organization already has a warehouse, customer master, approved KPI reports, an identity service and an incident repository. Retain those investments. Fund the missing product work: explicit temporal relationships, an approved metric interface, a bounded retrieval service where useful, shared response evidence and an acceptance suite.
+Start with one consequential agent task and an inventory of existing data capabilities. Identify which required meanings and operations are already governed and which product commitments are missing. Fund that gap, including interfaces, qualification and continuing ownership; retain useful warehouse, master-data, reporting, identity and search investments.
 
 Do not build all three products merely to complete the diagram. If the first task needs only a measure, begin there. Select a second consumer early enough to test whether the interface and ownership really support reuse. The first useful milestone is an additional agent adopting the capability without copying its business logic or taking over its source pipelines.
 
-### People and decision rights
-
-| Accountable role | Decisions and recurring work |
-|---|---|
-| Domain product owner | Consumer promise, authoritative meaning, source responsibilities, acceptable use and compatibility of changes |
-| Data-product engineering team | Publication pipeline, interfaces, evaluations, source incidents, recovery, support and retirement |
-| Shared platform owner | Common discovery, identity integration, contract tooling, observability, metering and paved deployment paths |
-| Agent/application owner | Task success, product selection, safe composition, final disclosure, human review and separately authorized actions |
-| Business sponsor | Funded use case, accepted outcome, value measurement and expansion or retirement decision |
-
-Security, privacy and domain specialists contribute concrete acceptance conditions within these responsibilities. A cross-functional review should settle decisions that require it; it should not become a separate ticket for every ordinary read. Staff the support and stewardship work as part of the product budget, not as an informal favor from the original agent team.
-
-The second consumer can change that commitment. Suppose a service agent requires fresher relationships and longer historical support than the account-review agent initially funded. The product owner assesses and negotiates the supported requirement; the sponsor funds any expanded service obligation and resolves priority conflicts. Consumer owners maintain acceptance cases and complete agreed migrations. The requirement either fits the current contract, justifies a funded extension or remains outside the promise. Adoption must not silently create an unfunded service-level commitment.
+The second consumer can change that commitment. A second consuming team may require fresher information or longer historical support than the first one funded. The product owner assesses and negotiates the supported requirement; the sponsor funds any expanded service obligation and resolves priority conflicts. Consumer owners maintain acceptance cases and complete agreed migrations. The requirement either fits the current contract, justifies a funded extension or remains outside the promise. Adoption must not silently create an unfunded service-level commitment.
 
 ### Adoption gates and the evidence they require
 

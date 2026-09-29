@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic arithmetic and contract demonstration for paper section 3.
+"""Synthetic arithmetic and contract demonstration for paper section 7.
 
 Run with Python 3.10+; only the standard library is used.
 
