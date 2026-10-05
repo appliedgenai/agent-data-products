@@ -200,7 +200,7 @@ Maintain an owned evaluation dataset with provenance, versioned cases, expected 
 
 Databricks documents managed evaluation datasets and distinguishes feedback on observed outputs from expectations of desired behavior. Those mechanisms support the workflow; owners still need to retain the external source, product, permission and application versions necessary to interpret a run. [MLflow evaluation datasets](https://docs.databricks.com/aws/en/mlflow3/genai/eval-monitor/build-eval-dataset), [Human feedback and expectations](https://docs.databricks.com/aws/en/mlflow3/genai/human-feedback).
 
-![Agent outcomes feed a reviewed cycle of diagnosis, accountable repair, evaluation and compatible product release.](diagrams/04-reviewed-product-learning.png)
+![Agent outcomes feed a reviewed cycle of diagnosis, accountable repair, evaluation and compatible product release.](diagrams/04-reviewed-product-learning.svg)
 
 *Figure 3. Evaluation can change a shared product, the consuming agent or the evaluator itself. Feedback is a candidate signal. Owners approve tested changes before other agents receive them.*
 
